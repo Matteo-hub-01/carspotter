@@ -34,12 +34,18 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "dark": { "backgroundColor": "#000000" }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "L'application a besoin de l'appareil photo pour repérer des voitures.",
+          "photosPermission": "L'application sauvegarde les photos dans votre galerie."
+        }
+      ],
+      "expo-media-library"
     ],
     "experiments": {
       "typedRoutes": true,
