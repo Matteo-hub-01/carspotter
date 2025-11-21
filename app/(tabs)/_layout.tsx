@@ -1,33 +1,63 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { GalleryVerticalEnd, ShoppingBag, User, Home, CarFront } from 'lucide-react-native';
+import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets(); 
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: '#b10202ff',
+        tabBarInactiveTintColor: '#ffffffff',
+        tabBarShowLabel: false,
+        tabBarStyle: {
+          backgroundColor: '#000000ff',
+          height: 50 + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 10,
+          borderRadius: 20,
+          position: 'absolute', 
+          bottom: 20,
+          marginHorizontal: '2.5%',
+          width: '95%',
+        },
+        tabBarItemStyle: {
+          marginTop: 10,
+        },
+        tabBarBackground: () => <View style={StyleSheet.absoluteFill} />,
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="car-spotter"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <CarFront size={30} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="feed"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ color }) => <GalleryVerticalEnd size={30} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          tabBarIcon: ({ color }) => <Home size={30} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          tabBarIcon: ({ color }) => <ShoppingBag size={30} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarIcon: ({ color }) => <User size={30} color={color} />,
         }}
       />
     </Tabs>
