@@ -1,5 +1,3 @@
-// File: app/(tabs)/MapScreen.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
