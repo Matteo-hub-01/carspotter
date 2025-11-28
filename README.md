@@ -1,6 +1,3 @@
-# Welcome to your Expo app 👋
-
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
 
@@ -17,6 +14,17 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```
 
 In the output, you'll find options to open the app in a
+
+
+Figma : https://www.figma.com/design/SJAKLa8MjmWQRW7G5ECkrj/CarSpotter?node-id=0-1&t=cwqkKg0Htgrfoobe-1
+
+
+Trello : https://trello.com/b/WXPwxgri/carspotter
+
+
+
+
+
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
