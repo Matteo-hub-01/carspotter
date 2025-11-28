@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+// File: app/(tabs)/MapScreen.tsx
+
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,9 +17,10 @@ import {
 import { Camera, User, X, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import MapView, { Region } from 'react-native-maps';
+import MapView, { Region, Marker } from 'react-native-maps';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 
 const initialRegion: Region = {
   latitude: 50.6293,
@@ -29,92 +32,113 @@ const initialRegion: Region = {
 const nightMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#212121' }] },
   { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }, { height: '200%' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
   { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#757575' }] },
   { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2c2c2c' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
-  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] }
 ];
 
 export default function MapScreen() {
   const router = useRouter();
+  const mapRef = useRef<MapView>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
 
-  // Demande des permissions au lancement
   useEffect(() => {
     (async () => {
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
-        Alert.alert('Permissions manquantes', "L'app a besoin de l'accès à l'appareil photo et à la galerie.");
+      await ImagePicker.requestCameraPermissionsAsync();
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({});
+        setUserLocation(loc);
+        mapRef.current?.animateToRegion(
+          {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.015,
+          },
+          1000
+        );
       }
     })();
   }, []);
 
+  const showPhotoTips = () => {
+    Alert.alert(
+      'Astuce photo parfaite',
+      '• Prends l\'arrière de la voiture\n• Logo + badge modèle bien visibles\n• Pas de reflet\n• Bonne luminosité',
+      [{ text: 'OK, je prends la photo !' }]
+    );
+  };
+
   const openCamera = async () => {
+    showPhotoTips();
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false,
       quality: 0.8,
+      aspect: [4, 3],
     });
 
     if (!result.canceled && result.assets?.[0]?.uri) {
-      setCapturedImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setCapturedImage(uri);
       setModalVisible(true);
+      setBrand('');
+      setModel('');
     }
   };
 
   const validateSpot = () => {
-    if (!brand.trim() || !model.trim()) {
-      Alert.alert('Champs requis', 'Veuillez indiquer la marque et le modèle de la voiture');
+    if (!brand) {
+      Alert.alert('Marque requise', 'Remplis la marque manuellement');
       return;
     }
-
-    // Ici tu pourras sauvegarder ou envoyer les données
-    console.log('Spot validé →', { imageUri: capturedImage, brand, model });
-
-    Alert.alert(
-      'Spot ajouté ! 🚗',
-      `${brand} ${model} a bien été repérée !`,
-      [{ text: 'OK', onPress: () => {
-        setModalVisible(false);
-        setCapturedImage(null);
-        setBrand('');
-        setModel('');
-      }}]
-    );
+    Alert.alert('Spot ajouté !', `${brand} ${model}`.trim(), [
+      {
+        text: 'OK',
+        onPress: () => {
+          setModalVisible(false);
+          setCapturedImage(null);
+          setBrand('');
+          setModel('');
+        },
+      },
+    ]);
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#000000', '#8B0000']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-
+      <LinearGradient colors={['#000000', '#8B0000']} style={StyleSheet.absoluteFillObject} />
       <StatusBar style="light" />
 
       <MapView
-        style={StyleSheet.absoluteFillObject}
+        ref={mapRef}
+        style={[StyleSheet.absoluteFillObject, {height: '120%'}]}
         initialRegion={initialRegion}
         customMapStyle={nightMapStyle}
         provider="google"
-      />
+      >
+        {userLocation && (
+          <Marker coordinate={{ latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude }}>
+            <View style={styles.userMarker}>
+              <View style={styles.userMarkerDot} />
+            </View>
+          </Marker>
+        )}
+      </MapView>
 
-      {/* Profil en haut à gauche */}
       <Pressable onPress={() => router.push('/profile')} style={styles.profileContainer}>
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <User size={20} color="#fff" />
-          </View>
+          <View style={styles.avatar}><User size={20} color="#fff" /></View>
           <View>
             <Text style={styles.pseudoLabel}>PSEUDO</Text>
             <Text style={styles.pseudo}>XXX cars</Text>
@@ -122,17 +146,12 @@ export default function MapScreen() {
         </View>
       </Pressable>
 
-      {/* Bouton caméra flottant */}
       <Pressable onPress={openCamera} style={styles.cameraButton}>
-        <Camera size={32} color="#ffffff" />
+        <Camera size={32} color="#fff" />
       </Pressable>
 
-      {/* Modale après prise de photo */}
       <Modal visible={modalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
@@ -143,7 +162,7 @@ export default function MapScreen() {
                 <Image source={{ uri: capturedImage }} style={styles.capturedImage} resizeMode="cover" />
               )}
 
-              <Text style={styles.modalTitle}>Quelle voiture as-tu repérée ?</Text>
+              <Text style={styles.modalTitle}>Quel bolide as-tu spoté ?</Text>
 
               <TextInput
                 style={styles.input}
@@ -152,7 +171,6 @@ export default function MapScreen() {
                 value={brand}
                 onChangeText={setBrand}
                 autoCapitalize="words"
-                autoFocus
               />
 
               <TextInput
@@ -164,7 +182,10 @@ export default function MapScreen() {
                 autoCapitalize="words"
               />
 
-              <TouchableOpacity onPress={validateSpot} style={styles.validateButton}>
+              <TouchableOpacity
+                onPress={validateSpot}
+                style={styles.validateButton}
+              >
                 <Check size={28} color="#fff" />
                 <Text style={styles.validateText}>Valider le spot</Text>
               </TouchableOpacity>
@@ -177,12 +198,12 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1 , justifyContent: 'center', alignItems: 'center' },
   profileContainer: { position: 'absolute', top: 50, left: 20, zIndex: 10 },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 30,
     paddingVertical: 20,
     borderRadius: 12,
@@ -198,25 +219,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  pseudoLabel: { fontSize: 10, color: '#aaa', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  pseudoLabel: { fontSize: 10, color: '#aaa', fontWeight: '600', textTransform: 'uppercase' },
   pseudo: { fontSize: 14, color: '#fff', fontWeight: 'bold' },
   cameraButton: {
     position: 'absolute',
     bottom: 120,
     alignSelf: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: '#000',
     padding: 28,
     borderRadius: 50,
     borderWidth: 3,
     borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 12,
   },
-
-  // Modale
+  userMarker: { alignItems: 'center', justifyContent: 'center' },
+  userMarkerDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#00BFFF',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.97)',
@@ -225,7 +248,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '92%',
-    maxHeight: '90%',
     backgroundColor: '#111',
     borderRadius: 20,
     padding: 20,
@@ -233,9 +255,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
   },
-  closeButton: { position: 'absolute', top: 10, right: 10, padding: 8 },
+  closeButton: { position: 'absolute', top: 12, right: 12, padding: 8 },
   capturedImage: { width: 300, height: 300, borderRadius: 16, marginVertical: 20 },
-  modalTitle: { fontSize: 22, color: '#fff', fontWeight: 'bold', marginBottom: 20 },
+  modalTitle: { fontSize: 22, color: '#fff', fontWeight: 'bold', marginVertical: 10 },
   input: {
     backgroundColor: '#222',
     color: '#fff',
@@ -252,7 +274,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 15,
   },
   validateText: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
 });
